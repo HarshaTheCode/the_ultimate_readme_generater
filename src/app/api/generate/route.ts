@@ -1,10 +1,11 @@
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { getDatabase } from '@/lib/mongodb';
 import { getReadmeCacheCollection, getUsersCollection } from '@/lib/database-schema';
 import { createRepositoryAnalyzer } from '@/lib/repository-analyzer';
 import { createAIReadmeGenerator, GenerationOptions } from '@/lib/ai-readme-generator';
-import { ObjectId } from 'mongodb';
 
 export interface GenerateRequest {
   owner: string;
@@ -303,10 +304,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (error.message?.includes('No AI providers')) {
+    if (error.message?.includes('No available AI providers') || error.message?.includes('No AI providers')) {
       return NextResponse.json(
-        { error: 'AI service temporarily unavailable' },
-        { status: 503 }
+        { 
+          error: 'Internal server error',
+          details: 'No available AI providers'
+        },
+        { status: 500 }
       );
     }
     

@@ -1,6 +1,9 @@
+
+
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { RepositoryMetadata } from './repository-analyzer';
 import { getPerformanceMonitor, measurePerformance } from './performance-monitor';
+import { ENV_CONFIG } from './env-config';
 
 export interface AIProvider {
   name: string;
@@ -30,6 +33,9 @@ export class GeminiProvider implements AIProvider {
   private model: any;
 
   constructor(apiKey: string) {
+    if (!apiKey) {
+      throw new Error('Gemini API key is required');
+    }
     this.client = new GoogleGenerativeAI(apiKey);
     this.model = this.client.getGenerativeModel({ model: 'gemini-1.5-flash' });
   }
@@ -43,7 +49,7 @@ export class GeminiProvider implements AIProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.GEMINI_API_KEY;
+    return !!(ENV_CONFIG.GEMINI_API_KEY || process.env.GEMINI_API_KEY);
   }
 }
 
@@ -53,47 +59,73 @@ export class OpenRouterProvider implements AIProvider {
   private baseUrl = 'https://openrouter.ai/api/v1';
 
   constructor(apiKey: string) {
+    if (!apiKey) {
+      throw new Error('OpenRouter API key is required');
+    }
     this.apiKey = apiKey;
   }
 
   async generate(prompt: string): Promise<string> {
     return measurePerformance(this.name, async () => {
+      console.log('OpenRouter: Making API request...');
+      console.log('OpenRouter: API Key length:', this.apiKey.length);
+      console.log('OpenRouter: API Key prefix:', this.apiKey.substring(0, 10) + '...');
+
+      const requestBody = {
+        model: 'mistralai/mistral-7b-instruct:free', // Use a valid free model
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0.7
+      };
+
+      console.log('OpenRouter: Request body:', JSON.stringify(requestBody, null, 2));
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': process.env.NEXTAUTH_URL || 'http://localhost:3000',
-          'X-Title': 'ReadMeGen MVP'
+          'X-Title': 'ReadMeGen MVP',
+          'User-Agent': 'ReadMeGen-MVP/1.0.0'
         },
-        body: JSON.stringify({
-          model: 'anthropic/claude-3.5-sonnet',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 4000,
-          temperature: 0.7
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('OpenRouter: Response status:', response.status);
+      console.log('OpenRouter: Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorText = await response.text();
+        console.log('OpenRouter: Error response text:', errorText);
+
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: { message: errorText } };
+        }
+
         if (response.status === 429) {
           throw new Error('RATE_LIMIT_EXCEEDED');
         }
-        throw new Error(`OpenRouter API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorData.error?.message || errorText || 'Unknown error'}`);
       }
 
       const data = await response.json();
+      console.log('OpenRouter: Success response:', data);
+
       return data.choices[0]?.message?.content || '';
     });
   }
 
   isAvailable(): boolean {
-    return !!process.env.OPENROUTER_API_KEY;
+    return !!(ENV_CONFIG.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY);
   }
 }
 
@@ -106,18 +138,36 @@ export class AIReadmeGenerator {
   }
 
   private initializeProviders(): void {
+    // Read keys directly from process.env to avoid module caching issues
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+
     // Initialize Gemini as primary provider
-    if (process.env.GEMINI_API_KEY) {
-      this.providers.push(new GeminiProvider(process.env.GEMINI_API_KEY));
+    if (geminiKey) {
+      try {
+        const geminiProvider = new GeminiProvider(geminiKey);
+        if (geminiProvider.isAvailable()) {
+          this.providers.push(geminiProvider);
+        }
+      } catch (error) {
+        console.error('Failed to initialize Gemini provider:', error);
+      }
     }
 
     // Initialize OpenRouter as fallback
-    if (process.env.OPENROUTER_API_KEY) {
-      this.providers.push(new OpenRouterProvider(process.env.OPENROUTER_API_KEY));
+    if (openRouterKey) {
+      try {
+        const openRouterProvider = new OpenRouterProvider(openRouterKey);
+        if (openRouterProvider.isAvailable()) {
+          this.providers.push(openRouterProvider);
+        }
+      } catch (error) {
+        console.error('Failed to initialize OpenRouter provider:', error);
+      }
     }
 
     if (this.providers.length === 0) {
-      throw new Error('No AI providers configured. Please set GEMINI_API_KEY or OPENROUTER_API_KEY environment variables.');
+      console.error('No AI providers were initialized. Check server logs for details.');
     }
   }
 
@@ -128,10 +178,17 @@ export class AIReadmeGenerator {
     metadata: RepositoryMetadata,
     options: GenerationOptions = {}
   ): Promise<GenerationResult> {
+    if (this.providers.length === 0) {
+      throw new Error('No AI providers configured. Please set GEMINI_API_KEY or OPENROUTER_API_KEY in your .env.local file.');
+    }
+
     const prompt = this.buildPrompt(metadata, options);
     const monitor = getPerformanceMonitor();
-    
-    // Try to use the best performing provider first
+
+    // Start with Gemini (index 0) as it's more reliable
+    this.currentProviderIndex = 0;
+
+    // Try to use the best performing provider first (if available)
     const bestProvider = monitor.getBestProvider();
     if (bestProvider) {
       const providerIndex = this.providers.findIndex(p => p.name === bestProvider);
@@ -139,21 +196,21 @@ export class AIReadmeGenerator {
         this.currentProviderIndex = providerIndex;
       }
     }
-    
+
     for (let attempt = 0; attempt < this.providers.length; attempt++) {
       const provider = this.providers[this.currentProviderIndex];
-      
+
       // Skip providers that should be avoided due to recent failures
       if (monitor.shouldAvoidProvider(provider.name)) {
         console.log(`Skipping ${provider.name} due to recent failures`);
         this.switchToNextProvider();
         continue;
       }
-      
+
       try {
         console.log(`Attempting README generation with ${provider.name}...`);
         const markdown = await provider.generate(prompt);
-        
+
         return {
           markdown: this.postProcessMarkdown(markdown),
           provider: provider.name,
@@ -161,7 +218,7 @@ export class AIReadmeGenerator {
         };
       } catch (error: any) {
         console.warn(`${provider.name} failed:`, error.message);
-        
+
         if (error.message === 'RATE_LIMIT_EXCEEDED') {
           console.log(`${provider.name} rate limit exceeded, switching to next provider...`);
           this.switchToNextProvider();
@@ -169,7 +226,7 @@ export class AIReadmeGenerator {
           console.error(`${provider.name} error:`, error);
           this.switchToNextProvider();
         }
-        
+
         // If this was the last provider, throw the error
         if (attempt === this.providers.length - 1) {
           throw new Error(`All AI providers failed. Last error: ${error.message}`);
@@ -215,7 +272,7 @@ export class AIReadmeGenerator {
       prompt += `
 - **Package Manager**: ${metadata.packageManager.type}
 - **Install Command**: ${metadata.packageManager.installCommand}`;
-      
+
       if (metadata.packageManager.runCommand) {
         prompt += `
 - **Run Command**: ${metadata.packageManager.runCommand}`;
@@ -247,7 +304,7 @@ export class AIReadmeGenerator {
     // Languages
     if (Object.keys(metadata.languages).length > 0) {
       const languageList = Object.entries(metadata.languages)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 5)
         .map(([lang]) => lang)
         .join(', ');
@@ -344,10 +401,10 @@ Generate the complete README.md content now:`;
 
     // Ensure proper spacing between sections
     processed = processed.replace(/\n#{1,6}\s/g, '\n\n$&');
-    
+
     // Remove excessive newlines
     processed = processed.replace(/\n{4,}/g, '\n\n\n');
-    
+
     // Ensure the README starts with a title
     if (!processed.startsWith('#')) {
       processed = `# ${processed}`;
