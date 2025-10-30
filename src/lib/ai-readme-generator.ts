@@ -142,19 +142,7 @@ export class AIReadmeGenerator {
     const geminiKey = process.env.GEMINI_API_KEY;
     const openRouterKey = process.env.OPENROUTER_API_KEY;
 
-    // Initialize Gemini as primary provider
-    if (geminiKey) {
-      try {
-        const geminiProvider = new GeminiProvider(geminiKey);
-        if (geminiProvider.isAvailable()) {
-          this.providers.push(geminiProvider);
-        }
-      } catch (error) {
-        console.error('Failed to initialize Gemini provider:', error);
-      }
-    }
-
-    // Initialize OpenRouter as fallback
+    // Initialize OpenRouter as the primary and only provider
     if (openRouterKey) {
       try {
         const openRouterProvider = new OpenRouterProvider(openRouterKey);
@@ -179,7 +167,7 @@ export class AIReadmeGenerator {
     options: GenerationOptions = {}
   ): Promise<GenerationResult> {
     if (this.providers.length === 0) {
-      throw new Error('No AI providers configured. Please set GEMINI_API_KEY or OPENROUTER_API_KEY in your .env.local file.');
+      throw new Error('No AI providers configured. Please set OPENROUTER_API_KEY in your .env.local file.');
     }
 
     const prompt = this.buildPrompt(metadata, options);

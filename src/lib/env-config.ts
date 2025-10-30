@@ -22,17 +22,15 @@ if (typeof window === 'undefined') {
     console.error('CRITICAL ERROR: MONGODB_URI is not set.');
   }
 
-  if (!process.env.GEMINI_API_KEY && !process.env.OPENROUTER_API_KEY) {
-    console.warn('WARNING: No AI provider keys (GEMINI_API_KEY, OPENROUTER_API_KEY) are set. README generation will fail.');
+  if (!process.env.OPENROUTER_API_KEY) {
+    console.warn('WARNING: No AI provider key (OPENROUTER_API_KEY) is set. README generation will fail.');
   } else {
-    console.log(`- GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? 'present' : 'missing'}`);
     console.log(`- OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? 'present' : 'missing'}`);
   }
 }
 
 export const ENV_CONFIG = {
   // AI Provider Keys
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 
   // Database
@@ -53,5 +51,5 @@ export const ENV_CONFIG = {
 
 // Function to check if at least one AI provider is configured
 export function isAIConfigured(): boolean {
-  return !!ENV_CONFIG.GEMINI_API_KEY || !!ENV_CONFIG.OPENROUTER_API_KEY;
+  return !!ENV_CONFIG.OPENROUTER_API_KEY;
 }

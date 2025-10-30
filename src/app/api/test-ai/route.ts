@@ -7,42 +7,12 @@ export async function GET(request: NextRequest) {
     console.log('=== AI PROVIDER TEST ===');
     
     // Get API keys with fallbacks
-    const geminiKey = ENV_CONFIG.GEMINI_API_KEY || process.env.GEMINI_API_KEY || getEnvVar('GEMINI_API_KEY');
     const openRouterKey = ENV_CONFIG.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || getEnvVar('OPENROUTER_API_KEY');
 
     const results: any = {
-      geminiKey: geminiKey ? `present (${geminiKey.length} chars)` : 'missing',
       openRouterKey: openRouterKey ? `present (${openRouterKey.length} chars)` : 'missing',
       tests: {}
     };
-
-    // Test Gemini API
-    if (geminiKey && geminiKey.trim()) {
-      try {
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
-        const client = new GoogleGenerativeAI(geminiKey);
-        const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        
-        const result = await model.generateContent('Say "Hello from Gemini!" in exactly those words.');
-        const response = await result.response;
-        const text = response.text();
-        
-        results.tests.gemini = {
-          status: 'success',
-          response: text.substring(0, 100) + (text.length > 100 ? '...' : '')
-        };
-      } catch (error: any) {
-        results.tests.gemini = {
-          status: 'failed',
-          error: error.message
-        };
-      }
-    } else {
-      results.tests.gemini = {
-        status: 'skipped',
-        reason: 'No API key available'
-      };
-    }
 
     // Test OpenRouter API
     if (openRouterKey && openRouterKey.trim()) {
