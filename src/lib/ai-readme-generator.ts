@@ -1,6 +1,5 @@
 
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { RepositoryMetadata } from './repository-analyzer';
 import { getPerformanceMonitor, measurePerformance } from './performance-monitor';
 import { ENV_CONFIG } from './env-config';
@@ -25,32 +24,6 @@ export interface GenerationResult {
   provider: string;
   generatedAt: Date;
   tokensUsed?: number;
-}
-
-export class GeminiProvider implements AIProvider {
-  name = 'Gemini';
-  private client: GoogleGenerativeAI;
-  private model: any;
-
-  constructor(apiKey: string) {
-    if (!apiKey) {
-      throw new Error('Gemini API key is required');
-    }
-    this.client = new GoogleGenerativeAI(apiKey);
-    this.model = this.client.getGenerativeModel({ model: 'gemini-1.5-flash' });
-  }
-
-  async generate(prompt: string): Promise<string> {
-    return measurePerformance(this.name, async () => {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    });
-  }
-
-  isAvailable(): boolean {
-    return !!(ENV_CONFIG.GEMINI_API_KEY || process.env.GEMINI_API_KEY);
-  }
 }
 
 export class OpenRouterProvider implements AIProvider {

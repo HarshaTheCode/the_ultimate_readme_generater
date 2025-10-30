@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ENV_CONFIG } from '@/lib/env-config';
-import { getEnvVar } from '@/lib/temp-env';
 
 export async function GET(request: NextRequest) {
   try {
     console.log('=== AI PROVIDER TEST ===');
     
     // Get API keys with fallbacks
-    const openRouterKey = ENV_CONFIG.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || getEnvVar('OPENROUTER_API_KEY');
+    const openRouterKey = ENV_CONFIG.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
 
     const results: any = {
       openRouterKey: openRouterKey ? `present (${openRouterKey.length} chars)` : 'missing',

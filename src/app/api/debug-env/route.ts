@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ENV_CONFIG } from '@/lib/env-config';
-import { getEnvVar } from '@/lib/temp-env';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,22 +8,15 @@ export async function GET(request: NextRequest) {
     // Check all environment variable sources
     const debugInfo = {
       processEnv: {
-        GEMINI_API_KEY: process.env.GEMINI_API_KEY ? `present (${process.env.GEMINI_API_KEY.length} chars)` : 'missing',
         OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ? `present (${process.env.OPENROUTER_API_KEY.length} chars)` : 'missing',
         NODE_ENV: process.env.NODE_ENV,
       },
       envConfig: {
-        GEMINI_API_KEY: ENV_CONFIG.GEMINI_API_KEY ? `present (${ENV_CONFIG.GEMINI_API_KEY.length} chars)` : 'missing',
         OPENROUTER_API_KEY: ENV_CONFIG.OPENROUTER_API_KEY ? `present (${ENV_CONFIG.OPENROUTER_API_KEY.length} chars)` : 'missing',
         NODE_ENV: ENV_CONFIG.NODE_ENV,
       },
-      tempEnv: {
-        GEMINI_API_KEY: getEnvVar('GEMINI_API_KEY') ? `present (${getEnvVar('GEMINI_API_KEY')!.length} chars)` : 'missing',
-        OPENROUTER_API_KEY: getEnvVar('OPENROUTER_API_KEY') ? `present (${getEnvVar('OPENROUTER_API_KEY')!.length} chars)` : 'missing',
-      },
       finalKeys: {
-        geminiKey: ENV_CONFIG.GEMINI_API_KEY || process.env.GEMINI_API_KEY || getEnvVar('GEMINI_API_KEY'),
-        openRouterKey: ENV_CONFIG.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || getEnvVar('OPENROUTER_API_KEY'),
+        openRouterKey: ENV_CONFIG.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY,
       }
     };
 
