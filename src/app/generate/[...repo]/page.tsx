@@ -15,13 +15,14 @@ import { RepositoryMetadata } from '@/lib/repository-analyzer';
 import { GenerationOptions } from '@/lib/ai-readme-generator';
 import { toast } from 'react-hot-toast';
 
-const DynamicMarkdownEditor = dynamic(() => import('@/components/ui/MarkdownEditor'), {
+const DynamicMarkdownEditor = dynamic(() => import('@/components/ui/MarkdownEditor').then(mod => mod.MarkdownEditor), {
   ssr: false,
   loading: () => <LoadingSpinner size="md" />, // Use existing LoadingSpinner
 });
 
 export default function GeneratePage() {
   const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
+  const [readmeContent, setReadmeContent] = useState<string>(''); // Added this line
   const router = useRouter();
   const params = useParams();
 
