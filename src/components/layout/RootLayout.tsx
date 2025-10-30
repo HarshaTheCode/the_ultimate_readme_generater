@@ -1,8 +1,7 @@
-'use client';
-
 import React from 'react';
 import { Header } from './Header';
-import { Footer } from './Footer';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from '@/context/AuthContext'; // Added import
 
 interface RootLayoutProps {
   children: React.ReactNode;
@@ -10,14 +9,16 @@ interface RootLayoutProps {
 
 const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
-      <main className="flex-1">
-        {children}
-      </main>
-      <Footer />
-    </div>
+    <AuthProvider> {/* Added AuthProvider */}
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-grow">
+          {children}
+        </main>
+        <Toaster position="bottom-right" />
+      </div>
+    </AuthProvider> // Closed AuthProvider
   );
 };
 
-export { RootLayout };
+export {RootLayout}

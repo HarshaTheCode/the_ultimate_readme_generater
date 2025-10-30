@@ -8,11 +8,11 @@ interface RepositoryCardProps {
   className?: string;
 }
 
-const RepositoryCard: React.FC<RepositoryCardProps> = ({
+const RepositoryCard: React.FC<RepositoryCardProps> = React.memo(function RepositoryCard({
   repository,
   onClick,
   className
-}) => {
+}) {
   const handleClick = () => {
     onClick?.(repository);
   };
@@ -117,6 +117,6 @@ const RepositoryCard: React.FC<RepositoryCardProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export { RepositoryCard };

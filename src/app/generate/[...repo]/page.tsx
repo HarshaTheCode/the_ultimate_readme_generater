@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic'; // Added import
+import { useSession } from 'next-auth/react';
+// import { MarkdownEditor } from '@/components/ui/MarkdownEditor'; // Removed direct import
+import { MarkdownPreview } from '@/components/ui/MarkdownPreview';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { MarkdownPreview } from '@/components/ui/MarkdownPreview';
-import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
-import { useRequireAuth, useReadmeGeneration, useReadmeEditor } from '@/hooks';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useAuthContext } from '@/context/AuthContext'; // New import
+import { useReadmeGeneration, useReadmeEditor } from '@/hooks'; // Removed useRequireAuth
+import { RepositoryMetadata } from '@/lib/repository-analyzer';
+import { GenerationOptions } from '@/lib/ai-readme-generator';
+import { toast } from 'react-hot-toast';
+
+const DynamicMarkdownEditor = dynamic(() => import('@/components/ui/MarkdownEditor'), {
+  ssr: false,
+  loading: () => <LoadingSpinner size="md" />, // Use existing LoadingSpinner
+});
 
 export default function GeneratePage() {
   const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
@@ -14,7 +26,7 @@ export default function GeneratePage() {
   const params = useParams();
 
   // Use authentication hook for protected route
-  const { session, isLoading: authLoading } = useRequireAuth();
+  const { session, isLoading: authLoading } = useAuthContext(); // Changed to useAuthContext
 
   // Use README generation hook
   const {
@@ -41,7 +53,6 @@ export default function GeneratePage() {
   // Auto-generate README when authenticated and params are available
   useEffect(() => {
     if (session && owner && repoName && !generatedReadme && !isGenerating) {
-      console.log('Starting README generation for:', owner, repoName);
       generateReadme(owner, repoName);
     }
   }, [session, owner, repoName, generatedReadme, isGenerating, generateReadme]);
@@ -250,12 +261,11 @@ export default function GeneratePage() {
               </div>
             ) : (
               <div className="p-6 h-full">
-                <MarkdownEditor
-                  value={editedMarkdown}
-                  onChange={updateMarkdown}
-                  placeholder="Edit your README content here..."
-                  className="h-full min-h-[500px]"
-                />
+          <DynamicMarkdownEditor
+            value={readmeContent}
+            onChange={setReadmeContent}
+            className="flex-1"
+          />
               </div>
             )}
           </div>

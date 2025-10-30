@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { RepositoryCard } from '@/components/ui/RepositoryCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Button } from '@/components/ui/Button';
-import { useRequireAuth, useRepositories, useRepositoryFilter } from '@/hooks';
+import { RepositoryCardSkeleton } from '@/components/ui/RepositoryCardSkeleton'; // Added import
+import { useAuthContext } from '@/context/AuthContext'; // New import
+import { useRepositories, useRepositoryFilter } from '@/hooks'; // Removed useRequireAuth
 import { Repository } from '@/types';
 
 export default function RepositoriesPage() {
@@ -14,7 +17,7 @@ export default function RepositoriesPage() {
   const router = useRouter();
 
   // Use authentication hook for protected route
-  const { session, isLoading: authLoading } = useRequireAuth();
+  const { session, isLoading: authLoading } = useAuthContext(); // Changed to useAuthContext
 
   // Use repositories hook for data fetching
   const {
@@ -88,9 +91,11 @@ export default function RepositoriesPage() {
             </div>
             {session && (
               <div className="flex items-center gap-3">
-                <img
+                <Image // Replaced img with Image
                   src={session.user.avatar_url}
                   alt={session.user.username}
+                  width={40} // Added width
+                  height={40} // Added height
                   className="w-10 h-10 rounded-full"
                 />
                 <div className="text-right">
@@ -170,3 +175,7 @@ export default function RepositoriesPage() {
     </div>
   );
 }
+
+
+
+

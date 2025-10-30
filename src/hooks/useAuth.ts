@@ -101,7 +101,8 @@ export function useRequireAuth() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !session) {
+    // Only redirect if router is ready and not loading and no session
+    if (router.isReady && !isLoading && !session) {
       router.push('/');
     }
   }, [session, isLoading, router]);

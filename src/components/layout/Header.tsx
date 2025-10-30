@@ -1,59 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react'; // Removed useState, useEffect
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/Button';
-
-interface User {
-  id: string;
-  githubId: number;
-  username: string;
-  email?: string;
-  avatar_url: string;
-}
-
-interface Session {
-  user: User;
-  expires: string;
-}
+import { useAuthContext } from '@/context/AuthContext'; // Added import
 
 const Header: React.FC = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { session, isLoading, signOut } = useAuthContext(); // Use useAuthContext
   const router = useRouter();
 
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  const checkSession = async () => {
-    try {
-      const response = await fetch('/api/auth/session');
-      if (response.ok) {
-        const sessionData = await response.json();
-        setSession(sessionData.user ? sessionData : null);
-      }
-    } catch (error) {
-      console.error('Failed to check session:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSignOut = async () => {
-    try {
-      const response = await fetch('/api/auth/signout', {
-        method: 'POST',
-      });
-      
-      if (response.ok) {
-        setSession(null);
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('Sign out failed:', error);
-    }
+    await signOut(); // Use signOut from context
+    router.push('/');
   };
 
   return (
@@ -92,10 +52,12 @@ const Header: React.FC = () => {
                 {/* User Avatar and Info */}
                 <div className="flex items-center space-x-2">
                   {session.user?.avatar_url && (
-                    <img
+                    <Image // Replaced img with Image
                       className="h-8 w-8 rounded-full"
                       src={session.user.avatar_url}
                       alt={session.user.username || 'User avatar'}
+                      width={32} // Added width
+                      height={32} // Added height
                     />
                   )}
                   <span className="hidden sm:block text-sm font-medium text-gray-700">
