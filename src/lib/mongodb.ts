@@ -9,8 +9,6 @@ const options = {
   maxPoolSize: 10, // Maintain up to 10 socket connections
   serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
   socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  tlsAllowInvalidCertificates: true, // Temporarily allow invalid certificates for debugging
-  tlsAllowInvalidHostnames: true, // Temporarily allow invalid hostnames for debugging
 };
 
 let client: MongoClient;
